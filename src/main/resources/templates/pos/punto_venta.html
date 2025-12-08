@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" th:replace="~{layout/base :: plantilla(~{::#contenido-pos})}">
+
+<body>
+
+    <div id="contenido-pos" class="pos-screen">
+        <h3 class="mb-4 text-secondary"><i class="fas fa-shopping-cart"></i> Punto de Venta (POS)</h3>
+        <hr>
+
+        <div class="row">
+            <div class="col-md-7">
+                <div id="buscador-productos" class="card shadow-sm mb-4">
+                    <div class="card-body">
+                        <h5 class="card-title"><i class="fas fa-search"></i> Buscar Productos</h5>
+                        <div class="input-group">
+                            <input type="text" id="inputBuscarProducto" class="form-control"
+                                placeholder="Escriba nombre o código de barras..." autofocus>
+                            <button class="btn btn-outline-secondary" type="button" onclick="iniciarBusqueda()">
+                                <i class="fas fa-barcode"></i> Escanear
+                            </button>
+                        </div>
+                        <div id="resultadosBusqueda" class="mt-2">
+                        </div>
+                    </div>
+                </div>
+
+                <div id="carrito-compras" class="card shadow">
+                    <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
+                        Carrito de Compras (<span id="contador-productos">0</span> productos)
+                    </div>
+                    <div class="card-body p-0">
+                        <table class="table table-sm table-striped mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Código</th>
+                                    <th>Producto</th>
+                                    <th style="width: 100px;">Cantidad</th>
+                                    <th class="text-end">Precio</th>
+                                    <th class="text-end">Subtotal</th>
+                                    <th></th>
+                                </tr>
+                            </thead>
+                            <tbody id="tabla-carrito">
+                                <tr>
+                                    <td colspan="6" class="text-center text-muted p-4">El carrito está vacío. Empieza a
+                                        agregar productos.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-5">
+                <div id="datos-transaccion" class="card shadow-sm mb-4">
+                    <div class="card-header bg-light"><i class="fas fa-receipt"></i> Información de Venta</div>
+                    <div class="card-body">
+                        <p>Fecha: <strong id="fecha-actual"></strong></p>
+
+                        <div class="mb-3">
+                            <label for="inputBuscarCliente" class="form-label">Cliente (<small class="text-info">Busca
+                                    DNI/Nombre</small>)</label>
+
+                            <input type="text" id="inputBuscarCliente" class="form-control"
+                                placeholder="DNI, RUC o Nombre del Cliente..." list="listaClientesResultados"
+                                oninput="buscarClientesFront(this.value)" value="Público General">
+
+                            <datalist id="listaClientesResultados">
+                            </datalist>
+
+                            <input type="hidden" id="idClienteSeleccionado" value="1">
+
+                            <small class="form-text text-muted">Cliente Actual: <strong id="nombreClienteActual">Público
+                                    General (DNI 00000000)</strong></small>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="selectMetodoPago" class="form-label">Método de Pago</label>
+                            <select id="selectMetodoPago" class="form-select">
+                                <option value="efectivo" selected>Efectivo</option>
+                                <option value="tarjeta_credito">Tarjeta de Crédito</option>
+                                <option value="yape">Yape</option>
+                                <option value="plin">Plin</option>
+                                <option value="transferencia">Transferencia</option>
+                            </select>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="inputMontoRecibido" class="form-label">Monto Recibido</label>
+                            <input type="number" id="inputMontoRecibido" class="form-control" value="0.00" min="0"
+                                step="0.01">
+                            <div class="text-success mt-1">Cambio: <strong id="cambioCalculado">S/ 0.00</strong></div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="observaciones" class="form-label">Observaciones (Opcional)</label>
+                            <textarea id="observaciones" class="form-control" rows="2"></textarea>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="resumen-pago" class="card shadow">
+                    <div class="card-header bg-secondary text-white"><i class="fas fa-calculator"></i> Resumen de Pago
+                    </div>
+                    <div class="card-body">
+                        <p class="d-flex justify-content-between">Subtotal:</p>
+                        <p class="d-flex justify-content-between">IGV (18%):</p>
+                        <p class="d-flex justify-content-between">Descuento:</p>
+                        <hr>
+                        <h4 class="d-flex justify-content-between text-danger">TOTAL: <span id="total-final">S/
+                                0.00</span></h4>
+                    </div>
+                    <div class="card-footer d-grid gap-2">
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="checkbox" value="" id="checkRegistrarVenta">
+                            <label class="form-check-label" for="checkRegistrarVenta">
+                                Registrar Venta (Confirmar Transacción)
+                            </label>
+                        </div>
+                        <button class="btn btn-success btn-lg" id="btnProcesarVenta" disabled onclick="procesarVenta()">
+                            <i class="fas fa-check-circle"></i> PROCESAR VENTA
+                        </button>
+                        <button class="btn btn-warning" onclick="limpiarCarrito()">
+                            <i class="fas fa-trash-alt"></i> Limpiar Carrito
+                        </button>
+                        <button class="btn btn-danger" onclick="anularTransaccion()">
+                            <i class="fas fa-times-circle"></i> Anular
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="modalConfirmacionVenta" tabindex="-1" aria-labelledby="modalConfirmacionVentaLabel"
+        aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header bg-success text-white">
+                    <h5 class="modal-title" id="modalConfirmacionVentaLabel">✅ Venta Registrada con Éxito</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body" id="resumen-venta-modal-body">
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-info" id="btnVerDetalle">Ver Detalle</button>
+                    <button type="button" class="btn btn-primary" id="btnImprimirTicket">Imprimir</button>
+                    <button type="button" class="btn btn-success" onclick="window.location.reload();">Nueva
+                        Venta</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script th:src="@{/js/pos-logic.js}"></script>
+
+</body>
+
+</html>

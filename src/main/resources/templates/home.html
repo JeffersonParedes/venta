@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" th:replace="~{layout/base :: plantilla(~{::#dashboard-content})}">
+
+<body>
+
+    <div id="dashboard-content">
+        <div class="container-fluid">
+            <div class="alert alert-success">
+                <h4 class="alert-heading">¡Bienvenido!</h4>
+                <p>Has iniciado sesión correctamente en la caja <strong th:text="${cajaNombre}"></strong>.</p>
+                <p>Caja: <strong th:text="${cajaNombre}"></strong> | Sucursal:
+                    <strong th:text="${sucursalNombre}"></strong>
+                </p>
+                <hr>
+                <p class="mb-0">Sistema listo para procesar ventas.</p>
+            </div>
+
+            <div class="row mt-4">
+                <div class="col-md-4">
+                    <div class="card text-center shadow-sm">
+                        <div class="card-body">
+                            <h5 class="card-title">Iniciar Venta</h5>
+                            <a href="/pos" class="btn btn-primary mt-2"
+                                style="background-color: var(--promart-orange); border-color: var(--promart-orange);">Ir
+                                al POS</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</body>
+
+</html>

@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+
+<head>
+    <title>Seleccionar Caja - Promart</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #f0f2f5;
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .card-selection {
+            width: 100%;
+            max-width: 500px;
+            border: none;
+            shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+        }
+
+        .header-promart {
+            background-color: #FA582D;
+            color: white;
+            padding: 20px;
+            border-radius: 10px 10px 0 0;
+            text-align: center;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="card card-selection">
+        <div class="header-promart">
+            <h4>¡Hola, <span th:text="${usuario.empleado.nombre}">Empleado</span>!</h4>
+            <small>Estás asignado a: <b th:text="${nombreSucursal}">Sucursal Norte</b></small>
+        </div>
+        <div class="card-body p-4">
+            <p class="text-center text-muted mb-4">Por favor, selecciona la caja para iniciar tu turno.</p>
+
+            <form th:action="@{/auth/seleccionar-caja}" method="post">
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Caja Disponible:</label>
+                    <select name="idCaja" class="form-select form-select-lg" required>
+                        <option value="" selected disabled>-- Selecciona una caja --</option>
+                        <option th:each="caja : ${cajas}" th:value="${caja.idCaja}"
+                            th:text="${caja.nombre} + ' - ' + ${caja.tipo}"></option>
+                    </select>
+                </div>
+
+                <div class="d-grid gap-2 mt-4">
+                    <button type="submit" class="btn btn-dark btn-lg">ABRIR CAJA E INICIAR</button>
+                    <a href="/logout" class="btn btn-outline-danger">Cancelar / Salir</a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+</body>
+
+</html>
