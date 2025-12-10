@@ -50,6 +50,16 @@ public class VentaServiceImpl implements VentaService {
 
                 // --- 2. CÁLCULO DE TOTALES ---
 
+                // Validar que el totalVenta no sea null
+                if (dto.getTotalVenta() == null) {
+                        throw new RuntimeException("El total de la venta no puede ser nulo");
+                }
+                
+                // Validar que haya detalles
+                if (dto.getDetalles() == null || dto.getDetalles().isEmpty()) {
+                        throw new RuntimeException("La venta debe tener al menos un producto");
+                }
+
                 BigDecimal total = dto.getTotalVenta();
                 // 1.18 es BigDecimal(1.18)
                 BigDecimal subtotalNeto = total.divide(new BigDecimal("1.18"), 2, java.math.RoundingMode.HALF_UP);
@@ -59,9 +69,17 @@ public class VentaServiceImpl implements VentaService {
                 BigDecimal cambio = dto.getCambio() != null ? dto.getCambio() : BigDecimal.ZERO;
                 BigDecimal descuentos = dto.getDescuentos() != null ? dto.getDescuentos() : BigDecimal.ZERO;
 
-                // Validación de monto recibido
-                if (montoRecibido.compareTo(total) < 0) {
-                        throw new RuntimeException("Monto recibido insuficiente para el total de la venta.");
+                // Validación de monto recibido (solo para métodos que requieren pago inmediato)
+                // Para tarjetas, yape, plin, etc., el monto recibido puede ser igual al total
+                String metodoPago = dto.getMetodoPago() != null ? dto.getMetodoPago().toUpperCase().replace("_", " ") : "EFECTIVO";
+                if ("EFECTIVO".equals(metodoPago) && montoRecibido.compareTo(total) < 0) {
+                        throw new RuntimeException("Monto recibido insuficiente para el total de la venta. Total: " + total + ", Recibido: " + montoRecibido);
+                }
+                
+                // Para métodos no efectivo, ajustar cambio a 0 si es necesario
+                if (!"EFECTIVO".equals(metodoPago)) {
+                        cambio = BigDecimal.ZERO;
+                        montoRecibido = total; // El monto recibido es igual al total para métodos no efectivo
                 }
 
                 // --- 3. CREACIÓN DE CABECERA VENTA ---
@@ -70,10 +88,16 @@ public class VentaServiceImpl implements VentaService {
                 venta.setNumeroVenta("VNT-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase());
                 venta.setFecha(LocalDateTime.now());
                 venta.setTipoComprobante(dto.getTipoComprobante() != null ? dto.getTipoComprobante() : "BOLETA");
-                venta.setMetodoPago(dto.getMetodoPago() != null ? dto.getMetodoPago() : "EFECTIVO");
+                // Normalizar método de pago: convertir a mayúsculas y reemplazar guiones bajos
+                String metodoPagoNormalizado = dto.getMetodoPago() != null ? 
+                    dto.getMetodoPago().toUpperCase().replace("_", " ") : "EFECTIVO";
+                venta.setMetodoPago(metodoPagoNormalizado);
 
                 // Asignación de campos
-                venta.setCanalVenta("TIENDA");
+                // Intentar diferentes valores comunes para canal_venta según la restricción CHECK de la BD
+                // Valores comunes: "FISICO", "LOCAL", "TIENDA", "ONLINE", "TELEFONO"
+                // Si ninguno funciona, el error mostrará un mensaje simplificado al usuario
+                venta.setCanalVenta("FISICO"); // Sin la 'A' al final
                 venta.setSubtotal(subtotalNeto);
                 venta.setImpuestos(impuestos);
                 venta.setTotal(total);

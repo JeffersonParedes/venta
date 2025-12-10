@@ -152,7 +152,21 @@
         </div>
     </div>
 
-    <script th:src="@{/js/pos-logic.js}"></script>
+    <!-- Script inline como respaldo -->
+    <script>
+        // Asegurar que iniciarBusqueda esté disponible
+        if (typeof window.iniciarBusqueda === 'undefined') {
+            console.warn('pos-logic.js no se cargó, definiendo iniciarBusqueda como fallback');
+            window.iniciarBusqueda = function() {
+                const input = document.getElementById('inputBuscarProducto');
+                if (input && typeof buscarProductos === 'function') {
+                    buscarProductos(input.value.trim());
+                } else {
+                    console.error('Error: No se puede ejecutar la búsqueda. Recarga la página.');
+                }
+            };
+        }
+    </script>
 
 </body>
 

@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" th:replace="~{layout/base :: plantilla(~{::content})}">
+
+<head>
+</head>
+
+<body>
+    <div th:fragment="content">
+        <div class="container-fluid mt-4">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2>Historial de Ventas</h2>
+                <button class="btn btn-danger" onclick="exportarPdf()">
+                    <i class="fas fa-file-pdf"></i> Exportar PDF
+                </button>
+            </div>
+
+            <!-- Filtros -->
+            <div class="card mb-4 shadow-sm">
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-md-3">
+                            <label class="form-label">Fecha Inicio</label>
+                            <input type="datetime-local" id="fechaInicio" class="form-control">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Fecha Fin</label>
+                            <input type="datetime-local" id="fechaFin" class="form-control">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Buscar (N° Venta / Cliente)</label>
+                            <input type="text" id="busqueda" class="form-control" placeholder="Escribe para filtrar...">
+                        </div>
+                        <div class="col-md-2 d-flex align-items-end">
+                            <button class="btn btn-primary w-100" onclick="cargarHistorial()">
+                                <i class="fas fa-search"></i> Buscar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tabla -->
+            <div class="card shadow-sm">
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-striped table-hover mb-0">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th>N° Venta</th>
+                                    <th>Fecha</th>
+                                    <th>Cliente</th>
+                                    <th>Tipo</th>
+                                    <th>Método Pago</th>
+                                    <th>Total</th>
+                                    <th>Estado</th>
+                                    <th>Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tablaVentasBody">
+                                <!-- Se llena vía JS -->
+                                <tr>
+                                    <td colspan="8" class="text-center text-muted py-4">
+                                        Selecciona un rango de fechas y busca para ver resultados.
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Script Específico -->
+        <script th:src="@{/js/historial-logic.js}"></script>
+    </div>
+</body>
+
+</html>

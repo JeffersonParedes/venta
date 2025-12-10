@@ -20,10 +20,10 @@ public class ProductoServiceImpl implements ProductoService {
     @Override
     public List<ProductoBusquedaDto> buscarProductos(String termino) {
 
-        String likeTerm = "%" + termino.toLowerCase() + "%";
-
+        // CORRECCIÓN: No agregar '%' manualmente. Spring Data JPA ya lo maneja con
+        // 'Containing'.
         List<Producto> productos = productoRepository
-                .findByCodigoContainingIgnoreCaseOrNombreContainingIgnoreCase(likeTerm, likeTerm);
+                .findByCodigoContainingIgnoreCaseOrNombreContainingIgnoreCase(termino, termino);
 
         // Mapear de Entity a DTO
         return productos.stream()

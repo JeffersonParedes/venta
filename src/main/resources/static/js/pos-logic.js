@@ -4,9 +4,42 @@
 // Dependencias: Bootstrap 5 (para modales), jQuery (opcional, pero no usado aquí), Fetch API.
 // =================================================================
 
+console.log('pos-logic.js cargado correctamente');
+
 const IGV_RATE = 0.18; // Tasa de IGV (18% para Perú)
 let carrito = {}; // Almacena productos {id: {id, codigo, nombre, precio, stock, cantidad}}
 let timerBusqueda; // Para el debounce en la búsqueda de productos
+
+// Función global para el botón "Escanear" - debe estar disponible inmediatamente
+window.iniciarBusqueda = function () {
+    console.log('iniciarBusqueda llamada');
+    const input = document.getElementById('inputBuscarProducto');
+    if (!input) {
+        console.error('Error: inputBuscarProducto no encontrado');
+        return;
+    }
+    
+    const termino = input.value.trim();
+    console.log('Término de búsqueda:', termino);
+    
+    // Verificar si buscarProductos está disponible
+    if (typeof buscarProductos === 'function') {
+        buscarProductos(termino);
+    } else {
+        // Si no está disponible, intentar después de un breve delay
+        console.warn('buscarProductos no está disponible aún, esperando...');
+        setTimeout(function() {
+            if (typeof buscarProductos === 'function') {
+                buscarProductos(termino);
+            } else {
+                console.error('Error: buscarProductos no está definido');
+                alert('Error: El sistema de búsqueda no está disponible. Por favor, recarga la página.');
+            }
+        }, 50);
+    }
+};
+
+console.log('iniciarBusqueda definida:', typeof window.iniciarBusqueda);
 
 // =================================================================
 // 1. INICIALIZACIÓN
@@ -56,22 +89,25 @@ document.addEventListener('DOMContentLoaded', () => {
  * Llama al API de Spring Boot para buscar productos.
  */
 function buscarProductos(termino) {
+    console.log(">>> [DEBUG] buscarProductos llamado con:", termino);
     const resultadosDiv = document.getElementById('resultadosBusqueda');
     resultadosDiv.innerHTML = '<p class="text-center text-info"><i class="fas fa-spinner fa-spin"></i> Buscando productos...</p>';
 
     // Llama al ProductoRestController: GET /api/productos/buscar?term=query
     fetch(`/api/productos/buscar?term=${termino}`)
         .then(response => {
+            console.log(">>> [DEBUG] Respuesta recibida del servidor:", response.status);
             if (!response.ok) {
                 throw new Error('Error al conectar con la API de productos.');
             }
             return response.json();
         })
         .then(productos => {
+            console.log(">>> [DEBUG] Productos obtenidos:", productos);
             renderizarCatalogo(productos);
         })
         .catch(error => {
-            console.error('Error de búsqueda:', error);
+            console.error('>>> [DEBUG] Error de búsqueda:', error);
             resultadosDiv.innerHTML = `<p class="text-center text-danger">Error: ${error.message}</p>`;
         });
 }
@@ -95,21 +131,27 @@ function renderizarCatalogo(productos) {
         const col = document.createElement('div');
         col.className = 'col-md-6 col-lg-4';
 
+        // Sanitizar stock para visualización
+        const stockVisual = p.stock === null ? 0 : p.stock;
+        const stockClass = stockVisual > 0 ? (stockVisual > 10 ? 'success' : 'warning') : 'danger';
+
         const card = document.createElement('div');
-        card.className = `card h-100 product-card cursor-pointer shadow-sm ${p.stock <= 0 ? 'bg-light text-muted' : ''}`;
+        // Usamos stockVisual para la clase CSS
+        card.className = `card h-100 product-card cursor-pointer shadow-sm ${stockVisual <= 0 ? 'bg-light text-muted' : ''}`;
 
         // Almacenar todos los datos importantes para pasarlos al carrito
-        card.setAttribute('onclick', `agregarProductoACarrito(${p.id}, '${p.codigo}', ${p.precioVenta}, '${p.nombre}', ${p.stock})`);
+        // Nota: p.stock puede ser null, lo pasamos tal cual o como 0
+        card.setAttribute('onclick', `agregarProductoACarrito(${p.id}, '${p.codigo}', ${p.precioVenta}, '${p.nombre}', ${stockVisual})`);
 
         card.innerHTML = `
             <div class="card-body">
                 <h6 class="card-title text-primary">${p.nombre}</h6>
                 <p class="card-text small mb-1">Cód: <strong>${p.codigo}</strong></p>
                 <h5 class="text-danger fw-bold">S/ ${p.precioVenta.toFixed(2)}</h5>
-                <p class="card-text small text-${p.stock > 10 ? 'success' : p.stock > 0 ? 'warning' : 'danger'}">
-                    Stock: <strong>${p.stock}</strong>
+                <p class="card-text small text-${stockClass}">
+                    Stock: <strong>${stockVisual}</strong>
                 </p>
-                ${p.stock > 0 ? '' : '<span class="badge bg-danger">SIN STOCK</span>'}
+                ${stockVisual > 0 ? '' : '<span class="badge bg-danger">SIN STOCK</span>'}
             </div>
         `;
 
@@ -300,13 +342,16 @@ async function procesarVenta() {
 
     const productosEnCarrito = Object.values(carrito);
     const cambioFinal = montoRecibido - totalPagar;
+    
+    // Función auxiliar para redondear a 2 decimales y evitar problemas de precisión
+    const redondear = (num) => Math.round(num * 100) / 100;
 
     // 1. CONSTRUCCIÓN DEL DTO DE DETALLES (DetalleVentaDto)
     const detallesVenta = productosEnCarrito.map(item => ({
         idProducto: item.id,
         cantidad: item.cantidad,
-        precioUnitario: item.precio,
-        subtotal: item.cantidad * item.precio,
+        precioUnitario: redondear(item.precio),
+        subtotal: redondear(item.cantidad * item.precio),
         descuento: 0.00 // Asumimos 0.00 en línea
     }));
 
@@ -315,16 +360,18 @@ async function procesarVenta() {
         idCliente: parseInt(document.getElementById('idClienteSeleccionado').value),
         tipoComprobante: 'BOLETA',
         metodoPago: document.getElementById('selectMetodoPago').value,
-        totalVenta: totalPagar,
+        totalVenta: redondear(totalPagar),
         descuentos: 0.00,
-        montoRecibido: montoRecibido,
-        cambio: cambioFinal,
+        montoRecibido: redondear(montoRecibido),
+        cambio: redondear(Math.max(0, cambioFinal)), // Asegurar que el cambio no sea negativo
         observaciones: document.getElementById('observaciones').value,
         detalles: detallesVenta
     };
 
     // 3. LLAMADA FETCH POST
     try {
+        console.log('Enviando venta al servidor:', JSON.stringify(ventaRequest, null, 2));
+        
         const response = await fetch('/api/ventas/procesar', {
             method: 'POST',
             headers: {
@@ -338,8 +385,73 @@ async function procesarVenta() {
         }
 
         if (!response.ok) {
-            const errorText = await response.text();
-            throw new Error(`Fallo en el registro (Error ${response.status}). Posiblemente stock insuficiente o datos inválidos.`);
+            let errorMessage = `Fallo en el registro (Error ${response.status}).`;
+            try {
+                // Clonar la respuesta para poder leerla múltiples veces si es necesario
+                const responseClone = response.clone();
+                
+                // Intentar leer el body como JSON primero
+                const contentType = response.headers.get("content-type");
+                console.log('Content-Type de la respuesta:', contentType);
+                
+                if (contentType && contentType.includes("application/json")) {
+                    const errorData = await response.json();
+                    console.log('Datos de error parseados:', errorData);
+                    console.log('Tipo de errorData:', typeof errorData);
+                    console.log('Keys de errorData:', Object.keys(errorData));
+                    
+                    // Intentar extraer el mensaje de error de diferentes formas
+                    // Priorizar 'message' sobre 'error' porque 'message' suele tener más detalles
+                    if (errorData && typeof errorData === 'object') {
+                        if (errorData.message) {
+                            errorMessage = errorData.message;
+                        } else if (errorData.error) {
+                            errorMessage = errorData.error;
+                        } else if (errorData.toString && errorData.toString() !== '[object Object]') {
+                            errorMessage = errorData.toString();
+                        } else {
+                            // Si no tiene campos conocidos, mostrar el objeto completo como string
+                            errorMessage = JSON.stringify(errorData);
+                        }
+                    } else if (typeof errorData === 'string') {
+                        errorMessage = errorData;
+                    }
+                    
+                    console.log('Mensaje de error extraído:', errorMessage);
+                } else {
+                    // Si no es JSON, leer como texto
+                    const errorText = await response.text();
+                    console.log('Texto de error recibido:', errorText);
+                    if (errorText) {
+                        try {
+                            const errorJson = JSON.parse(errorText);
+                            errorMessage = errorJson.error || errorJson.message || errorMessage;
+                        } catch (parseError) {
+                            console.log('No se pudo parsear como JSON, usando texto directo');
+                            errorMessage = errorText || errorMessage;
+                        }
+                    }
+                }
+            } catch (e) {
+                console.error('Error al parsear respuesta de error:', e);
+                // Intentar leer como texto como último recurso
+                try {
+                    const errorText = await response.text();
+                    console.log('Texto de error (último intento):', errorText);
+                    if (errorText) {
+                        try {
+                            const errorJson = JSON.parse(errorText);
+                            errorMessage = errorJson.error || errorJson.message || errorMessage;
+                        } catch {
+                            errorMessage = errorText || errorMessage;
+                        }
+                    }
+                } catch (textError) {
+                    console.error('No se pudo leer el texto de error:', textError);
+                }
+            }
+            console.error('Error del servidor (final):', errorMessage);
+            throw new Error(errorMessage);
         }
 
         // Venta exitosa: recibe el VentaResponseDto
